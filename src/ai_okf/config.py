@@ -4,7 +4,7 @@ CLI_CONTEXT_SETTINGS: dict[str, object] = {
     "help_option_names": ["-h", "--help"],
 }
 
-DEFAULT_MODEL = "opencode-zen/deepseek-v4-flash-free"
+DEFAULT_MODEL = "opencode-zen/nemotron-3-ultra-free"
 DEFAULT_OUTPUT = Path(".okf-bundle")
 
 PROVIDER_BASE_URLS: dict[str, str] = {

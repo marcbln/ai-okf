@@ -1,3 +1,5 @@
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +31,7 @@ def init_command(  # type: ignore[no-untyped-def]
         help="Output directory for the OKF bundle",
     ),
     model: str = typer.Option(
-        None, "--model", "-m", help="LLM model (format: provider/model, default: opencode-zen/deepseek-v4-flash-free)"
+        None, "--model", "-m", help="LLM model (format: provider/model, default: opencode-zen/nemotron-3-ultra-free)"
     ),
     api_base: str = typer.Option(
         None, "--api-base", help="Override API base URL (provider default is inferred from model prefix)"
@@ -74,9 +76,20 @@ def init_command(  # type: ignore[no-untyped-def]
         try:
             plan_result = agent.run_sync(plan_prompt, deps=deps, output_type=list[OKFConceptPlan])
             plans: list[OKFConceptPlan] = plan_result.output
-        except Exception as e:
-            console.print(f"[red]Error generating plan via LLM:[/red] {e}")
-            raise typer.Exit(1)
+        except Exception:
+            console.print("[yellow]Structured output not supported by model, falling back to text-based planning...[/yellow]")
+            fallback_prompt = (
+                f"{plan_prompt}\n\n"
+                f"Return ONLY a raw JSON array (no markdown, no code fences) "
+                f"where each object has keys: concept_id, type, title, description, files_to_read. "
+                f"Output nothing except the JSON array."
+            )
+            fallback_result = agent.run_sync(fallback_prompt, deps=deps)
+            text = fallback_result.output
+            json_match = re.search(r"```(?:json)?\n?(.*?)\n?```", text, re.DOTALL)
+            raw = json_match.group(1) if json_match else text.strip()
+            data = json.loads(raw)
+            plans = [OKFConceptPlan(**item) for item in data]
 
         concepts = []
         for plan in plans:

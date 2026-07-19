@@ -12,9 +12,15 @@ from ai_okf.config import DEFAULT_MODEL, PROVIDER_API_KEY_ENV, PROVIDER_BASE_URL
 
 def _resolve_api_key(provider: str) -> str:
     env_var = PROVIDER_API_KEY_ENV.get(provider)
-    if env_var:
-        return os.environ.get(env_var, "")
-    return os.environ.get("OPENCODE_API_KEY", "")
+    if env_var is None:
+        env_var = "OPENCODE_API_KEY"
+    key = os.environ.get(env_var) or ""
+    if not key:
+        raise RuntimeError(
+            f"Missing API key: set {env_var} in .env.local "
+            f"(needed for provider '{provider}')"
+        )
+    return key
 
 
 def build_agent(model_name: str | None = None, api_base: str | None = None) -> Agent[dict[str, Any], str]:
