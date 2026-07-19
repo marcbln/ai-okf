@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ai_okf.agent.kb_agent import build_agent
-from ai_okf.config import DEFAULT_OUTPUT
+from ai_okf.config import DEFAULT_MODEL, DEFAULT_OUTPUT
 from ai_okf.core.okf_bundle import (
     parse_okf_markdown,
     save_bundle_metadata,
@@ -39,6 +39,9 @@ def init_command(  # type: ignore[no-untyped-def]
     force: bool = typer.Option(
         False, "--force", "-f", help="Overwrite existing OKF bundle"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show LLM requests and responses"
+    ),
 ):
     root = Path(path).resolve()
     output_dir = Path(output).resolve()
@@ -50,6 +53,11 @@ def init_command(  # type: ignore[no-untyped-def]
     if output_dir.exists() and not force:
         console.print(f"[yellow]Warning:[/yellow] Output directory '{output}' exists. Use -f to force.")
         raise typer.Exit(1)
+
+    resolved_model = model or DEFAULT_MODEL
+    console.print(f"[dim]Using model:[/dim] [cyan]{resolved_model}[/cyan]")
+    if verbose:
+        console.print("[dim]Verbose mode enabled — LLM requests and responses will be shown[/dim]")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -63,7 +71,7 @@ def init_command(  # type: ignore[no-untyped-def]
         files_summary = "\n".join(f"- `{f.path}` ({f.language or 'unknown'})" for f in files)
 
         progress.add_task(description="Preparing agent and planning concepts...", total=None)
-        agent = build_agent(model, api_base)
+        agent = build_agent(model, api_base, verbose=verbose)
         deps: dict[str, Any] = {"root": str(root)}
 
         plan_prompt = (

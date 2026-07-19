@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ai_okf.agent.kb_agent import build_agent
-from ai_okf.config import DEFAULT_OUTPUT
+from ai_okf.config import DEFAULT_MODEL, DEFAULT_OUTPUT
 from ai_okf.core.git_scanner import get_changes_since
 from ai_okf.core.okf_bundle import (
     load_bundle_metadata,
@@ -29,9 +29,17 @@ def update_command(  # type: ignore[no-untyped-def]
     api_base: str = typer.Option(
         None, "--api-base", help="Override API base URL (provider default is inferred from model prefix)"
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show LLM requests and responses"
+    ),
 ):
     root = Path(path).resolve()
     output_dir = Path(output).resolve()
+
+    resolved_model = model or DEFAULT_MODEL
+    console.print(f"[dim]Using model:[/dim] [cyan]{resolved_model}[/cyan]")
+    if verbose:
+        console.print("[dim]Verbose mode enabled — LLM requests and responses will be shown[/dim]")
 
     if not output_dir.exists():
         console.print(f"[red]Error:[/red] OKF bundle not found at '{output}'. Run 'okf init' first.")
@@ -53,7 +61,7 @@ def update_command(  # type: ignore[no-untyped-def]
             return
 
         progress.add_task(description="Updating OKF bundle via LLM...", total=None)
-        agent = build_agent(model, api_base)
+        agent = build_agent(model, api_base, verbose=verbose)
         deps: dict[str, Any] = {"root": str(root)}
 
         prompt = (
