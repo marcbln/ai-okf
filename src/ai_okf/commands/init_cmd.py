@@ -29,10 +29,10 @@ def init_command(  # type: ignore[no-untyped-def]
         help="Output directory for the OKF bundle",
     ),
     model: str = typer.Option(
-        None, "--model", "-m", help="LLM model to use (default: deepseek-v4-flash-free)"
+        None, "--model", "-m", help="LLM model (format: provider/model, default: opencode-zen/deepseek-v4-flash-free)"
     ),
     api_base: str = typer.Option(
-        None, "--api-base", help="OpenAI-compatible API base URL"
+        None, "--api-base", help="Override API base URL (provider default is inferred from model prefix)"
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Overwrite existing OKF bundle"

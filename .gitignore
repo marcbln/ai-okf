@@ -1,8 +1,11 @@
+.idea/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 .env
+!.env.schema
+.env.local
 dist/
 build/
 *.egg

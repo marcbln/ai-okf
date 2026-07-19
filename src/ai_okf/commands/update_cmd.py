@@ -25,9 +25,9 @@ def update_command(  # type: ignore[no-untyped-def]
         "-o",
         help="Output directory for the OKF bundle",
     ),
-    model: str = typer.Option(None, "--model", "-m", help="LLM model to use"),
+    model: str = typer.Option(None, "--model", "-m", help="LLM model (format: provider/model)"),
     api_base: str = typer.Option(
-        None, "--api-base", help="OpenAI-compatible API base URL"
+        None, "--api-base", help="Override API base URL (provider default is inferred from model prefix)"
     ),
 ):
     root = Path(path).resolve()
