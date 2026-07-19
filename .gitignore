@@ -8,3 +8,4 @@ build/
 *.egg
 .DS_Store
 .okf-bundle/
+.okf-metadata.json

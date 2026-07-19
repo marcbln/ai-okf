@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Any
 
+from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.toolsets import FunctionToolset
 
 
-def read_file_content(path: str, root: str = ".") -> str:
+def read_file_content(ctx: RunContext[dict[str, Any]], path: str) -> str:
+    root = ctx.deps.get("root", ".") if ctx.deps else "."
     full = Path(root) / path
     if not full.exists() or not full.is_file():
         return ""
@@ -32,8 +34,8 @@ class CodebaseAnalysisCapability(AbstractCapability[dict[str, Any]]):
             "analyze each file's purpose, structure, and key abstractions. "
             "Identify: modules/packages, classes, functions, data models, "
             "API endpoints, configuration, test patterns, dependencies. "
-            "Use read_file to inspect relevant files before producing analysis."
+            "Use read_file_content to inspect relevant files before producing analysis."
         )
 
-    def get_toolset(self):  # type: ignore[no-untyped-def]
+    def get_toolset(self) -> FunctionToolset:
         return FunctionToolset(tools=[read_file_content])
