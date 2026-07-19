@@ -58,6 +58,10 @@ tests/                  # pytest, tmp_path fixtures, no integration deps
 ## Architecture notes
 
 - Scanner (`core/scanner.py`) walks `root.rglob("*")`, skips `.git`, `node_modules`, `.venv`, `__pycache__`, `dist`, `build`, `*.pyc` dirs + `.okf-bundle`. Language map covers 20+ extensions.
+- `CodebaseAnalysisCapability` equips the agent with three tools:
+  - `read_file_content`: Reads up to 100KB of file text safely, preventing context limit saturation.
+  - `find_files_matching`: Locates specific paths based on wildcard globs or substring matches.
+  - `search_text_in_files`: Performs rapid, case-insensitive substring searches across non-excluded text files, highlighting file paths and line numbers.
 - `okf init` pipeline: scan → LLM plans concepts (typed `list[OKFConceptPlan]`) → LLM drafts each concept → writes `.md` files with YAML frontmatter to output dir → writes `index.md` + `.okf-metadata.json`.
 - `okf update` reads `last_ingested_commit` from `.okf-metadata.json`, runs `git diff` since that ref, asks LLM to update bundle. Updates `last_ingested_commit` on success.
 - LLM fallback: if `output_type` structured response fails, extracts JSON from text with regex.
