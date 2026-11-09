@@ -6,15 +6,30 @@ from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.toolsets import FunctionToolset
 
+from ai_okf.config import MAX_FILE_BYTES, is_protected_path
 from ai_okf.core.scanner import scan_codebase
+
+
+def _exclude_dirs(deps: dict[str, Any]) -> set[Path]:
+    output = deps.get("output")
+    if not output:
+        return set()
+    return {Path(str(output)).resolve()}
 
 
 def read_file_content(ctx: RunContext[dict[str, Any]], path: str) -> str:
     root = ctx.deps.get("root", ".") if ctx.deps else "."
-    full = Path(root) / path
+    if is_protected_path(path):
+        return "[blocked: protected file]"
+    root_path = Path(root).resolve()
+    full = (root_path / path).resolve()
+    if full != root_path and root_path not in full.parents:
+        return "[blocked: path escapes project root]"
     if not full.exists() or not full.is_file():
         return ""
     try:
+        if full.stat().st_size > MAX_FILE_BYTES:
+            return "[blocked: file exceeds size limit]"
         text = full.read_text(encoding="utf-8", errors="replace")
         if len(text) > 100_000:
             text = text[:100_000] + "\n... [truncated at 100KB]"
@@ -27,7 +42,7 @@ def find_files_matching(ctx: RunContext[dict[str, Any]], pattern: str) -> list[s
     root = ctx.deps.get("root", ".") if ctx.deps else "."
     root_path = Path(root).resolve()
 
-    files = scan_codebase(root_path)
+    files = scan_codebase(root_path, exclude_dirs=_exclude_dirs(ctx.deps))
 
     matched = []
     is_glob = any(char in pattern for char in ("*", "?", "[", "]"))
@@ -53,7 +68,7 @@ def search_text_in_files(
     root = ctx.deps.get("root", ".") if ctx.deps else "."
     root_path = Path(root).resolve()
 
-    files = scan_codebase(root_path)
+    files = scan_codebase(root_path, exclude_dirs=_exclude_dirs(ctx.deps))
     results = []
     query_lower = query.lower()
 
@@ -84,26 +99,37 @@ def search_text_in_files(
     return results
 
 
+CODE_INSTRUCTIONS = (
+    "You are a codebase analysis expert. Given a list of files in a project, "
+    "analyze each file's purpose, structure, and key abstractions. Identify: "
+    "modules/packages, classes, functions, data models, API endpoints, "
+    "configuration, test patterns, dependencies. Use read_file_content to "
+    "inspect relevant files before analysis. Use find_files_matching to search "
+    "for specific file paths using glob patterns or substrings. Use "
+    "search_text_in_files to look up text or code patterns inside files across "
+    "the codebase."
+)
+
+NOTES_INSTRUCTIONS = (
+    "You are a knowledge-base curator working on personal notes. Identify "
+    "projects, decisions and their rationale, people and organisations, "
+    "recurring themes, open questions, and reference material. Prefer durable "
+    "synthesis over restating single notes. Use read_file_content to inspect "
+    "relevant notes before analysis. Use find_files_matching to locate notes by "
+    "path or glob. Use search_text_in_files to look up terms across the notes."
+)
+
+
 class CodebaseAnalysisCapability(AbstractCapability[dict[str, Any]]):
     id: str = "codebase-analysis"
     description: str = (
-        "Capability for analyzing codebase files: reading file contents, "
+        "Capability for analyzing project files: reading file contents, "
         "identifying patterns, and extracting structural information."
     )
     defer_loading: bool = True
 
     def get_instructions(self) -> str:
-        return (
-            "You are a codebase analysis expert. Given a list of files in a project, "
-            "analyze each file's purpose, structure, and key abstractions. "
-            "Identify: modules/packages, classes, functions, data models, "
-            "API endpoints, configuration, test patterns, dependencies. "
-            "Use read_file_content to inspect relevant files before analysis. "
-            "Use find_files_matching to search for specific file paths using "
-            "glob patterns or substrings. "
-            "Use search_text_in_files to look up text or code patterns "
-            "inside files across the codebase."
-        )
+        return CODE_INSTRUCTIONS
 
     def get_toolset(self) -> FunctionToolset:
         return FunctionToolset(
@@ -113,3 +139,14 @@ class CodebaseAnalysisCapability(AbstractCapability[dict[str, Any]]):
                 search_text_in_files,
             ]
         )
+
+
+class NotesAnalysisCapability(CodebaseAnalysisCapability):
+    id: str = "notes-analysis"
+    description: str = (
+        "Capability for curating personal notes into topics, decisions, and "
+        "open questions."
+    )
+
+    def get_instructions(self) -> str:
+        return NOTES_INSTRUCTIONS

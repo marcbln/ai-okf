@@ -46,9 +46,18 @@ The API base URL is hardcoded per provider. You only need to set the matching AP
 
 - `okf init [PATH]` — Full codebase scan, generates complete OKF bundle
 - `okf update [PATH]` — Incremental update based on git changes
-- `--model, -m` — LLM model in `provider/model` format (default: opencode-zen/deepseek-v4-flash-free)
+- `--model, -m` — LLM model in `provider/model` format (default: `opencode-zen/deepseek-v4-flash-free`)
 - `--api-base` — Override API base URL (normally inferred from model provider)
 - `--output, -o` — Output directory (default: .okf-bundle)
+- `okf config show` — Print effective configuration and every config path parsed
+
+### Privacy default
+
+Runs are **local-only by default**: the agent refuses any non-loopback
+`--api-base` and skips secret/credential files (`.secrets.md`, `.env*`, keys,
+tokens) plus binary and oversized files. Point `--api-base` at a local
+OpenAI-compatible server, or pass `--cloud` to explicitly allow a remote
+endpoint.
 
 ### Env management (Varlock)
 

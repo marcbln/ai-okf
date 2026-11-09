@@ -32,7 +32,20 @@ def get_changes_since(path: Path, since_ref: str = "HEAD") -> str:
         if repo.bare or not repo.head.is_valid():
             return ""
         diff = repo.git.diff(since_ref, "--stat")
+        if not diff.strip():
+            return ""
         log = repo.git.log(since_ref, "--oneline", "--max-count=20")
         return f"Changes since {since_ref}:\n{diff}\n\nRecent commits:\n{log}"
     except (GitCommandError, Exception):
         return ""
+
+
+def get_changed_files(path: Path, since_ref: str = "HEAD") -> list[str]:
+    try:
+        repo = Repo(path)
+        if repo.bare or not repo.head.is_valid():
+            return []
+        out = repo.git.diff(since_ref, "--name-only")
+        return [line.strip() for line in out.splitlines() if line.strip()]
+    except (GitCommandError, Exception):
+        return []

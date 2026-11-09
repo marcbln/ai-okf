@@ -3,6 +3,7 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 
+from ai_okf.commands.config_cmd import config_app
 from ai_okf.commands.init_cmd import init_command
 from ai_okf.commands.update_cmd import update_command
 from ai_okf.config import CLI_CONTEXT_SETTINGS
@@ -21,3 +22,4 @@ app = typer.Typer(
 
 app.command(name="init")(init_command)
 app.command(name="update")(update_command)
+app.add_typer(config_app, name="config")

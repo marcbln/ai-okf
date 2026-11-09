@@ -1,7 +1,13 @@
 from datetime import datetime
 from pathlib import Path
 
-from ai_okf.core.okf_bundle import concept_exists, write_concept, write_index
+from ai_okf.core.okf_bundle import (
+    _pluralize,
+    concept_exists,
+    read_concepts,
+    write_concept,
+    write_index,
+)
 from ai_okf.models.okf import OKFConcept, OKFFrontmatter
 
 
@@ -56,3 +62,24 @@ def test_write_index(tmp_path: Path):
     assert "Modules" in content
     assert "[A](a.md)" in content
     assert "[B](b.md)" in content
+
+
+def test_read_concepts_skips_index(tmp_path: Path):
+    write_concept(
+        tmp_path,
+        OKFConcept(
+            concept_id="a",
+            frontmatter=OKFFrontmatter(type="Project", title="A"),
+            body="body",
+        ),
+    )
+    (tmp_path / "index.md").write_text("# Index\n")
+    concepts = read_concepts(tmp_path)
+    assert [c.concept_id for c in concepts] == ["a"]
+
+
+def test_pluralize() -> None:
+    assert _pluralize("process") == "Processes"
+    assert _pluralize("decision") == "Decisions"
+    assert _pluralize("project") == "Projects"
+    assert _pluralize("category") == "Categories"

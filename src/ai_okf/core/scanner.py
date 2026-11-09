@@ -1,5 +1,11 @@
 from pathlib import Path
 
+from ai_okf.config import (
+    EXTRA_TEXT_EXTENSIONS,
+    KNOWN_TEXT_NAMES,
+    MAX_FILE_BYTES,
+    is_protected_path,
+)
 from ai_okf.models.okf import CodebaseFile
 
 LANGUAGE_MAP: dict[str, str] = {
@@ -47,7 +53,18 @@ IGNORE_DIRS = {
 IGNORE_FILES = {".DS_Store"}
 
 
-def scan_codebase(root: Path) -> list[CodebaseFile]:
+def _is_text_file(path: Path) -> bool:
+    suffix = path.suffix.lower()
+    if suffix in LANGUAGE_MAP or suffix in EXTRA_TEXT_EXTENSIONS:
+        return True
+    return path.name in KNOWN_TEXT_NAMES
+
+
+def scan_codebase(
+    root: Path,
+    exclude_dirs: set[Path] | None = None,
+) -> list[CodebaseFile]:
+    excluded = exclude_dirs or set()
     files: list[CodebaseFile] = []
     for path in root.rglob("*"):
         if not path.is_file():
@@ -56,13 +73,26 @@ def scan_codebase(root: Path) -> list[CodebaseFile]:
         parts = rel.parts
         if any(p in IGNORE_DIRS for p in parts):
             continue
-        suffix = path.suffix.lower()
-        lang = LANGUAGE_MAP.get(suffix)
+        if rel.name in IGNORE_FILES:
+            continue
+        full = root / rel
+        if any(full == ex or ex in full.parents for ex in excluded):
+            continue
+        if is_protected_path(str(rel)):
+            continue
+        if not _is_text_file(path):
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size > MAX_FILE_BYTES:
+            continue
         files.append(
             CodebaseFile(
                 path=str(rel),
-                language=lang,
-                size_bytes=path.stat().st_size,
+                language=LANGUAGE_MAP.get(path.suffix.lower()),
+                size_bytes=size,
             )
         )
     files.sort(key=lambda f: f.path)

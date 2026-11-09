@@ -24,7 +24,12 @@ okf init [PATH] -o <dir>           # custom output dir (default: .okf-bundle)
 okf init [PATH] -m <provider/model> # pick LLM (default: opencode-zen/nemotron-3-ultra-free)
 okf init [PATH] -f                 # overwrite existing bundle
 okf update [PATH]                  # incremental update from git changes
+okf config show                    # effective config + parsed config paths
 ```
+
+Privacy is local-only by default: non-loopback `--api-base` values are refused
+unless `--cloud` is passed. Secret/credential files, binaries, and files over
+`MAX_FILE_BYTES` are excluded from scans.
 
 Providers: `opencode-zen` (free), `opencode-go`, `openrouter`. API key requirement follows from `-m` prefix — set `OPENCODE_API_KEY` or `OPENROUTER_API_KEY`.
 

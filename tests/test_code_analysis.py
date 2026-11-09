@@ -6,6 +6,7 @@ from ai_okf.agent.capabilities.code_analysis import (
     read_file_content,
     search_text_in_files,
 )
+from ai_okf.config import MAX_FILE_BYTES
 from ai_okf.models.okf import CodebaseFile
 
 
@@ -88,3 +89,25 @@ def test_read_file_content_edge_cases(tmp_path: Path):
     large_file.write_text("a" * 105_000)
     content = read_file_content(ctx, "large.txt")
     assert "[truncated at 100KB]" in content
+
+
+def test_read_file_content_blocks_protected(tmp_path: Path):
+    (tmp_path / ".secrets.md").write_text("password=123")
+    ctx = _make_ctx(str(tmp_path))
+    assert read_file_content(ctx, ".secrets.md") == "[blocked: protected file]"
+
+
+def test_read_file_content_blocks_oversized(tmp_path: Path):
+    (tmp_path / "big.md").write_text("a" * (MAX_FILE_BYTES + 1))
+    ctx = _make_ctx(str(tmp_path))
+    assert read_file_content(ctx, "big.md") == "[blocked: file exceeds size limit]"
+
+
+def test_read_file_content_blocks_path_traversal(tmp_path: Path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (tmp_path / "outside.md").write_text("secret")
+    ctx = _make_ctx(str(root))
+    assert read_file_content(ctx, "../outside.md") == (
+        "[blocked: path escapes project root]"
+    )
